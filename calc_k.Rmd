@@ -1,0 +1,53 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+```
+
+Goal: Calculate a range of K values for use in our fisheries modeling
+
+Look at stock catch data, mean catch data:
+```{r}
+stock <- read_csv(file.path(here(),"/globalprep/fis/v2019/output/stock_catch.csv"))
+mean_catch <- read_csv(file.path(here(),"/globalprep/fis/v2019/output/mean_catch.csv"))
+fis_catch <- read_csv(file.path(here(),"/globalprep/fis/v2019/output/FP_fis_catch.csv"))
+
+```
+
+Looks like the stock catch data will be the best since mean catch is aggregated by family and I'm interested in a broad range of K estimates.
+
+Write a function to estimate MSY from catch and to estimate K from MSY
+Based on Mangin et al 2018
+```{r}
+#Estimate MSY:
+msy <- function(catch){
+  1.78 * (10 ^ -0.8644 + (1.0976 * log10(catch)))
+}
+
+#Estimate K 
+K_est <- function(msy, g, phi){
+  (msy * ((phi + 1) ^ (1/phi))) / g
+}
+
+```
+
+Use this equation to mutate a column on the dataframe that includes MSY:
+```{r}
+#extract vector of catch values to feed into the MSY equation:
+catch_val <- stock$tons
+
+#Feed that vector through the msy function
+msy_est <- msy(catch = catch_val)
+
+#Mutate a column for msy values into the stock dataframe:
+stock_edit <- stock %>% 
+  mutate(msy = msy_est)
+```
+
+Minor issue... I need g values to run the K calculation and I don't have those for these stocks... 
